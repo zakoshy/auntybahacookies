@@ -24,15 +24,36 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Handshake, Heart, CreditCard } from 'lucide-react';
-import { useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Handshake, Heart, CreditCard, Smartphone, ArrowLeft } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-const formSchema = z.object({
+const partnerFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   organization: z.string().min(2, { message: 'Organization name is required.' }),
   email: z.string().email({ message: 'Please enter a valid email.' }),
   message: z.string().min(10, { message: 'Message must be at least 10 characters.' }),
+});
+
+const creditCardSchema = z.object({
+  cardNumber: z.string().refine((val) => /^\d{16}$/.test(val), 'Invalid card number'),
+  expiryDate: z.string().refine((val) => /^(0[1-9]|1[0-2])\/\d{2}$/.test(val), 'Invalid expiry date (MM/YY)'),
+  cvv: z.string().refine((val) => /^\d{3,4}$/.test(val), 'Invalid CVV'),
+  name: z.string().min(2, 'Name is required'),
+});
+
+const mpesaSchema = z.object({
+  phone: z.string().refine((val) => /^\d{10,12}$/.test(val), 'Invalid phone number'),
 });
 
 function SubmitButton() {
@@ -74,12 +95,151 @@ const PayPalIcon = () => (
   </svg>
 );
 
+function DonationForm({
+  selectedPayment,
+  onBack,
+}: {
+  selectedPayment: 'paypal' | 'mastercard' | 'mpesa';
+  onBack: () => void;
+}) {
+  const { toast } = useToast();
+  const [amount, setAmount] = useState('25');
+
+  const creditCardForm = useForm<z.infer<typeof creditCardSchema>>({
+    resolver: zodResolver(creditCardSchema),
+    defaultValues: { cardNumber: '', expiryDate: '', cvv: '', name: '' },
+  });
+
+  const mpesaForm = useForm<z.infer<typeof mpesaSchema>>({
+    resolver: zodResolver(mpesaSchema),
+    defaultValues: { phone: '' },
+  });
+
+  const handleDonation = (values: any) => {
+    console.log('Processing donation...', { amount, paymentMethod: selectedPayment, details: values });
+    toast({
+      title: 'Donation Submitted!',
+      description: `Thank you for your generous donation of $${amount}!`,
+    });
+  };
+  
+  const handlePayPalDonation = () => {
+    console.log('Redirecting to PayPal...', { amount });
+     toast({
+      title: 'Redirecting to PayPal',
+      description: `You are being redirected to complete your $${amount} donation.`,
+    });
+  }
+
+  const renderForm = () => {
+    switch (selectedPayment) {
+      case 'mastercard':
+        return (
+          <Form {...creditCardForm}>
+            <form onSubmit={creditCardForm.handleSubmit(handleDonation)} className="space-y-4">
+              <FormField control={creditCardForm.control} name="name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name on Card</FormLabel>
+                    <FormControl><Input {...field} placeholder="Jane Doe" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField control={creditCardForm.control} name="cardNumber" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Card Number</FormLabel>
+                    <FormControl><Input {...field} placeholder="0000 0000 0000 0000" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={creditCardForm.control} name="expiryDate" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expiry</FormLabel>
+                      <FormControl><Input {...field} placeholder="MM/YY" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField control={creditCardForm.control} name="cvv" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CVV</FormLabel>
+                      <FormControl><Input {...field} placeholder="123" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <Button type="submit" className="w-full">Donate ${amount}</Button>
+            </form>
+          </Form>
+        );
+      case 'mpesa':
+        return (
+          <Form {...mpesaForm}>
+            <form onSubmit={mpesaForm.handleSubmit(handleDonation)} className="space-y-4">
+              <p className="text-sm text-muted-foreground">A payment prompt will be sent to your phone to complete the transaction.</p>
+              <FormField control={mpesaForm.control} name="phone" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>M-Pesa Phone Number</FormLabel>
+                    <FormControl><Input {...field} placeholder="254712345678" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full">Donate ${amount}</Button>
+            </form>
+          </Form>
+        );
+      case 'paypal':
+        return (
+            <div className="text-center">
+                <p className="text-muted-foreground mb-4">You will be redirected to PayPal to complete your donation securely.</p>
+                <Button onClick={handlePayPalDonation} className="w-full">
+                    Proceed to PayPal
+                </Button>
+            </div>
+        )
+      default:
+        return null;
+    }
+  };
+  
+  const paymentMethodTitle = {
+      paypal: "PayPal",
+      mastercard: "Mastercard",
+      mpesa: "M-Pesa"
+  }
+
+  return (
+    <div className="space-y-4">
+       <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft/></Button>
+            <h3 className="text-lg font-semibold">Donate with {paymentMethodTitle[selectedPayment]}</h3>
+        </div>
+
+      <div className="flex justify-center gap-2 mb-6">
+        {['10', '25', '50', '100'].map((val) => (
+          <Button key={val} variant={amount === val ? 'default' : 'outline'} onClick={() => setAmount(val)}>
+            ${val}
+          </Button>
+        ))}
+      </div>
+      {renderForm()}
+    </div>
+  );
+}
+
+
 export default function PartnerPage() {
   const [state, formAction] = useActionState(submitPartnerForm, { message: '' });
+  const [paymentStep, setPaymentStep] = useState<'options' | 'form'>('options');
+  const [selectedPayment, setSelectedPayment] = useState<'paypal' | 'mastercard' | 'mpesa' | null>(null);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof partnerFormSchema>>({
+    resolver: zodResolver(partnerFormSchema),
     defaultValues: {
       name: '',
       organization: '',
@@ -100,6 +260,16 @@ export default function PartnerPage() {
       }
     }
   }, [state, toast, form]);
+
+  const handlePaymentSelect = (method: 'paypal' | 'mastercard' | 'mpesa') => {
+    setSelectedPayment(method);
+    setPaymentStep('form');
+  };
+
+  const resetDonationFlow = () => {
+    setPaymentStep('options');
+    setSelectedPayment(null);
+  }
 
   return (
     <div className="container mx-auto px-4 py-16 md:py-24 animate-fade-in">
@@ -196,20 +366,45 @@ export default function PartnerPage() {
             <p className="text-muted-foreground mb-6">
               Every donation, no matter the size, contributes to a healthier ocean. 100% of your contribution goes directly to our conservation and community funds.
             </p>
-            <div className="space-y-4">
-              <Button size="lg" className="w-full text-lg px-8 py-6">
-                <PayPalIcon />
-                Donate with PayPal
-              </Button>
-               <Button size="lg" className="w-full text-lg px-8 py-6">
-                <CreditCard />
-                Donate with Mastercard
-              </Button>
-               <Button size="lg" className="w-full text-lg px-8 py-6">
-                <MpesaIcon />
-                Donate with M-Pesa
-              </Button>
-            </div>
+            <Dialog onOpenChange={resetDonationFlow}>
+              <DialogTrigger asChild>
+                <Button size="lg" className="w-full text-lg px-8 py-6">
+                  Donate Now
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Make a Donation</DialogTitle>
+                  <DialogDescription>
+                    Choose your preferred payment method.
+                  </DialogDescription>
+                </DialogHeader>
+                {paymentStep === 'options' && (
+                   <div className="space-y-4 py-4">
+                    <Button onClick={() => handlePaymentSelect('paypal')} size="lg" className="w-full text-lg justify-start">
+                        <PayPalIcon />
+                        Donate with PayPal
+                    </Button>
+                    <Button onClick={() => handlePaymentSelect('mastercard')} size="lg" className="w-full text-lg justify-start">
+                        <CreditCard />
+                        Donate with Mastercard
+                    </Button>
+                    <Button onClick={() => handlePaymentSelect('mpesa')} size="lg" className="w-full text-lg justify-start">
+                        <MpesaIcon />
+                        Donate with M-Pesa
+                    </Button>
+                </div>
+                )}
+                {paymentStep === 'form' && selectedPayment && (
+                    <DonationForm selectedPayment={selectedPayment} onBack={resetDonationFlow} />
+                )}
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
       </div>
