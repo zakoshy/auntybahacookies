@@ -171,7 +171,7 @@ function DonationForm({
                   )}
                 />
               </div>
-              <Button type="submit" className="w-full">Donate ${amount}</Button>
+              <Button type="submit" className="w-full" disabled={!amount || parseFloat(amount) <= 0}>Donate ${amount}</Button>
             </form>
           </Form>
         );
@@ -188,7 +188,7 @@ function DonationForm({
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">Donate ${amount}</Button>
+              <Button type="submit" className="w-full" disabled={!amount || parseFloat(amount) <= 0}>Donate ${amount}</Button>
             </form>
           </Form>
         );
@@ -196,7 +196,7 @@ function DonationForm({
         return (
             <div className="text-center">
                 <p className="text-muted-foreground mb-4">You will be redirected to PayPal to complete your donation securely.</p>
-                <Button onClick={handlePayPalDonation} className="w-full">
+                <Button onClick={handlePayPalDonation} className="w-full" disabled={!amount || parseFloat(amount) <= 0}>
                     Proceed to PayPal
                 </Button>
             </div>
@@ -219,12 +219,16 @@ function DonationForm({
             <h3 className="text-lg font-semibold">Donate with {paymentMethodTitle[selectedPayment]}</h3>
         </div>
 
-      <div className="flex justify-center gap-2 mb-6">
-        {['10', '25', '50', '100'].map((val) => (
-          <Button key={val} variant={amount === val ? 'default' : 'outline'} onClick={() => setAmount(val)}>
-            ${val}
-          </Button>
-        ))}
+      <div className="space-y-2 mb-6">
+        <FormLabel htmlFor="amount">Amount (USD)</FormLabel>
+        <Input 
+          id="amount"
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="Enter amount"
+          min="1"
+        />
       </div>
       {renderForm()}
     </div>
