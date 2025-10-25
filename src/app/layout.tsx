@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { BackToTop } from '@/components/site/back-to-top';
 
 export const metadata: Metadata = {
-  title: 'OceanBite Cookies',
+  title: 'Aunty Baha Cookies',
   description: 'Tasting the Ocean, Preserving the Future.',
 };
 
