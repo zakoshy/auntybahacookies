@@ -56,6 +56,13 @@ const mpesaSchema = z.object({
   phone: z.string().refine((val) => /^\d{10,12}$/.test(val), 'Invalid phone number'),
 });
 
+const donationAmountSchema = z.object({
+    amount: z.preprocess(
+        (a) => parseFloat(z.string().parse(a)),
+        z.number().positive("Amount must be positive")
+    )
+})
+
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -103,7 +110,13 @@ function DonationForm({
   onBack: () => void;
 }) {
   const { toast } = useToast();
-  const [amount, setAmount] = useState('25');
+  
+  const amountForm = useForm<z.infer<typeof donationAmountSchema>>({
+    resolver: zodResolver(donationAmountSchema),
+    defaultValues: { amount: 25 },
+  });
+  
+  const amount = amountForm.watch('amount');
 
   const creditCardForm = useForm<z.infer<typeof creditCardSchema>>({
     resolver: zodResolver(creditCardSchema),
@@ -171,7 +184,7 @@ function DonationForm({
                   )}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={!amount || parseFloat(amount) <= 0}>Donate ${amount}</Button>
+              <Button type="submit" className="w-full" disabled={!amount || amount <= 0}>Donate ${amount}</Button>
             </form>
           </Form>
         );
@@ -188,7 +201,7 @@ function DonationForm({
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={!amount || parseFloat(amount) <= 0}>Donate ${amount}</Button>
+              <Button type="submit" className="w-full" disabled={!amount || amount <= 0}>Donate ${amount}</Button>
             </form>
           </Form>
         );
@@ -196,7 +209,7 @@ function DonationForm({
         return (
             <div className="text-center">
                 <p className="text-muted-foreground mb-4">You will be redirected to PayPal to complete your donation securely.</p>
-                <Button onClick={handlePayPalDonation} className="w-full" disabled={!amount || parseFloat(amount) <= 0}>
+                <Button onClick={handlePayPalDonation} className="w-full" disabled={!amount || amount <= 0}>
                     Proceed to PayPal
                 </Button>
             </div>
@@ -219,17 +232,29 @@ function DonationForm({
             <h3 className="text-lg font-semibold">Donate with {paymentMethodTitle[selectedPayment]}</h3>
         </div>
 
-      <div className="space-y-2 mb-6">
-        <FormLabel htmlFor="amount">Amount (USD)</FormLabel>
-        <Input 
-          id="amount"
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Enter amount"
-          min="1"
-        />
-      </div>
+      <Form {...amountForm}>
+        <form className="space-y-2 mb-6">
+            <FormField
+              control={amountForm.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Amount (USD)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number"
+                      placeholder="Enter amount"
+                      min="1"
+                      {...field}
+                      onChange={event => field.onChange(event.target.valueAsNumber)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+        </form>
+      </Form>
       {renderForm()}
     </div>
   );
