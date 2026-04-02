@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SiteHeader } from '@/components/site/header';
@@ -43,7 +42,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=PT+Sans:wght@400;700&display=swap"
           rel="stylesheet"
         />
-        <link rel="apple-touch-icon" href="/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/BCookies-192x192.png" />
       </head>
       <body className="font-body antialiased">
         <PWARegistration />
