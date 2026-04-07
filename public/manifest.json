@@ -1,12 +1,12 @@
+
 {
   "name": "OceanBite Cookies",
   "short_name": "OceanBite",
   "description": "Tasting the Ocean, Preserving the Future.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f5dc",
+  "background_color": "#F5F5DC",
   "theme_color": "#3CB371",
-  "orientation": "portrait",
   "icons": [
     {
       "src": "/BCookies-192x192.png",
